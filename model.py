@@ -75,3 +75,29 @@ with tf.name_scope("accuracy"):
     correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(Y, 1))
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
     tf.summary.scalar("accuracy", accuracy)
+
+# Ability to save all variables
+saver = tf.train.Saver()
+
+# Create a sesion and run the model
+with tf.Session() as sess:
+
+    # Set up the logs
+    writer = tf.summary.FileWriter("./logs/", sess.graph)
+    merged = tf.summary.merge_all(key="summaries")
+
+    # Initialise all variables
+    tf.global_variables_initializer().run()
+
+    # Run the model
+    for i in range(config.max_steps):
+        if i % config.batch_size == 0: # Record summarys and accuracy
+            summary, acc = sess.run([merged, accuracy], feed_dict={X: data.X_test, Y: data.y_test})
+            writer.add_summary(summary, i)
+            print('Accuracy at step %s: %s' % (i, acc))
+        else:
+            sess.run(train_step, feed_dict={X: data.X_train, Y: data.y_train})
+
+    # Save the data
+    save_path = saver.save(sess, "temp/model.ckpt")
+    print("Model saved in: %s" % save_path)

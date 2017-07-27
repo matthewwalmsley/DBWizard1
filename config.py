@@ -9,6 +9,7 @@ batch_size = 10
 num_classes = 2 # The number of outcomes
 units_h1 = 32 # The number of units in the first hidden layer
 units_h2 = 32 # The number of units in the second hidden layer
+max_steps = 100 # Number of learning iterations
 
 # Initialisation parameters
 std_dev = 0.01 # Standard deviation used when generating initial weights
