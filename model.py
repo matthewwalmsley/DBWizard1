@@ -43,15 +43,15 @@ def build_model(X, w1, b1, w2, b2, wo, bo):
         layer_2 = tf.add(tf.matmul(layer_1, w2), b2)
         layer_2 = tf.nn.relu(layer_2)
 
-    with tf.name_scope("layer_1"):
+    with tf.name_scope("output_layer"):
         layer_o = tf.matmul(layer_2, wo) + bo
 
     return layer_o
 
 
 # Set up placeholders for X & y
-X = tf.placeholder(tf.float32, [None, config.num_features], name="X")
-Y = tf.placeholder(tf.float32, [None, config.num_classes], name="Y")
+X_placeholder = tf.placeholder(tf.float32, [None, config.num_features], name="X")
+Y_placeholder = tf.placeholder(tf.float32, [None, config.num_classes], name="Y")
 
 # Set up the weights & biases for the two hiddne and one output layer
 w1 = init_random([config.num_features, config.units_h1], config.std_dev, "w1", "Weight 1 Summary")
@@ -64,15 +64,15 @@ wo = init_random([config.units_h2, config.num_classes], config.std_dev, "w3", "O
 bo = init_random([config.num_classes], config.std_dev, "b3", "Output Bias Summary")
 
 # Set up the model
-y = build_model(X, w1, b1, w2, b2, wo, bo)
+y = build_model(X_placeholder, w1, b1, w2, b2, wo, bo)
 
 with tf.name_scope("cost_function"):
-    cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=Y, logits=y))
+    cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=Y_placeholder, logits=y))
     train_step = tf.train.AdamOptimizer(config.learning_rate).minimize(cross_entropy)
     tf.summary.scalar("cost_function", cross_entropy)
 
 with tf.name_scope("accuracy"):
-    correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(Y, 1))
+    correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(Y_placeholder, 1))
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
     tf.summary.scalar("accuracy", accuracy)
 
@@ -92,11 +92,11 @@ with tf.Session() as sess:
     # Run the model
     for i in range(config.max_steps):
         if i % config.batch_size == 0: # Record summarys and accuracy
-            summary, acc = sess.run([merged, accuracy], feed_dict={X: data.X_test, Y: data.y_test})
+            summary, acc = sess.run([merged, accuracy], feed_dict={X_placeholder: data.X_test, Y_placeholder: data.y_test})
             writer.add_summary(summary, i)
             print('Accuracy at step %s: %s' % (i, acc))
         else:
-            sess.run(train_step, feed_dict={X: data.X_train, Y: data.y_train})
+            sess.run(train_step, feed_dict={X_placeholder: data.X_train, Y_placeholder: data.y_train})
 
     # Save the data
     save_path = saver.save(sess, "temp/model.ckpt")
