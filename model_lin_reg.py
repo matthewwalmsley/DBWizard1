@@ -5,6 +5,16 @@ import numpy as np
 
 # Add bias of 1 to the shape
 def append_bias_reshape(features, labels):
+    """Adds a bias row to the features tensor
+
+    Args:
+        features: A tensor containing all features
+        labels: A tensor containing all labels
+
+    Returns:
+        f: A tensor with an additional row of biases
+        l: A labels tensor
+    """
     n_training_samples = features.shape[0]
     n_dim = features.shape[1]
     f = np.reshape(np.c_[np.ones(n_training_samples),features],[n_training_samples,n_dim + 1])
@@ -38,13 +48,12 @@ training_epochs = 200
 # Initialise arrays to record metrics
 cost_history = np.empty(shape=[1], dtype=float)
 mse_history = np.empty(shape=[1], dtype=float)
-
 X = tf.placeholder(tf.float32,[None, n_features])
 y = tf.placeholder(tf.float32, [None, 1])
 W = tf.Variable(tf.ones([n_features,1]))
-
 init = tf.global_variables_initializer()
 
+# The calculation itself
 y_ = tf.matmul(X, W)
 
 # Model - minimise cost using graident descent
@@ -53,17 +62,35 @@ with tf.name_scope("cost_function"):
     training_step = tf.train.GradientDescentOptimizer(learning_rate).minimize(cost)
     tf.summary.scalar("cost_function", cost)
 
-sess = tf.Session()
-sess.run(init)
+# Histograms to allow me to visualise weights & biases
+tf.summary.histogram("Weight summary", W)
+tf.summary.histogram("Cost summary", cost)
 
-for epoch in range(training_epochs):
-    sess.run(training_step, feed_dict={X: X_train, y: y_train})
+# Ability to save and restore all variables
+saver = tf.train.Saver()
 
-    y_pred = sess.run(y_, feed_dict={X: X_test})
-    mse = tf.reduce_mean(tf.square(y_pred - y_test))
+# Create a sesion and run the model
+with tf.Session() as sess:
 
-    cost_history = np.append(cost_history,sess.run(cost, feed_dict={X: X_train, y: y_train}))
-    mse_history = np.append(mse_history,sess.run(mse))
+    # Iniiate the session
+    sess.run(init)
+
+    # Setup the log files
+    writer = tf.summary.FileWriter("./Logs/", sess.graph)
+    merged = tf.summary.merge_all(key="summaries")
+
+    for epoch in range(training_epochs):
+        sess.run(training_step, feed_dict={X: X_train, y: y_train})
+
+        y_pred = sess.run(y_, feed_dict={X: X_test})
+        mse = tf.reduce_mean(tf.square(y_pred - y_test))
+
+        cost_history = np.append(cost_history,sess.run(cost, feed_dict={X: X_train, y: y_train}))
+        mse_history = np.append(mse_history,sess.run(mse))
+
+    # Save the data
+    save_path = saver.save(sess, "temp/model.ckpt")
+    print("Model saved in: %s" % save_path)
 
 plt.title('Cost History')
 plt.xlabel('Epoch')
